@@ -42,3 +42,7 @@ clang++ -std=c++11 -pthread tcp_server.cpp -o tcp_server -lsqlite3 -luuid
 ```
 
 ***
+### blog
+
+https://zenn.dev/knaka0209/scraps/c669556d8dceeb
+
