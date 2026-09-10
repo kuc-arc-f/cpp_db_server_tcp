@@ -18,15 +18,14 @@
 
 #include "include/models.hpp"
 #include "include/BackupDb.hpp"
-#include "include/SQLiteJSONExporter.hpp"
 
+using namespace std;
 // JSON用エイリアス
 using json = nlohmann::json;
 
 std::string BACKUP_DB_PATH = "./data/backup.db";
 std::string BACKUP_SQL_PATH = "./data/backup.sql";
 std::vector<QueItem> VecQue;
-
 
 std::string readFileToString(const std::string& filePath) {
     std::ifstream file(filePath);
@@ -293,15 +292,6 @@ public:
         
         const char* sql = "SELECT id, title, description, created_at, completed FROM todos ORDER BY created_at DESC;";
         sqlite3_stmt* stmt;
-        /*
-CREATE TABLE todos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                description TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                completed BOOLEAN DEFAULT 0
-            );        
-        */
         if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
             return "[]";
         }
