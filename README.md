@@ -16,7 +16,7 @@ C++ DB Server TCP , IN memory database SQLite
 ***
 ### related Client TCP
 
-https://github.com/kuc-arc-f/cpp_15ex/tree/main/tcp_cl_2
+https://github.com/kuc-arc-f/cpp_16ex/tree/main/tcp_cl_2
 
 ***
 * LIB add
