@@ -324,11 +324,11 @@ public:
 TodoDatabase todoDb;
 
 void backup_save() {
-    BackupDb bLib(BACKUP_DB_PATH);
     try{    
         if (VecQue.size() > 0) {
+            BackupDb bLib(BACKUP_DB_PATH);
             QueItem item = VecQue[0];
-            std::cout << "uuid=" << item.uuid << std::endl;
+            //std::cout << "uuid=" << item.uuid << std::endl;
             VecQue.erase(VecQue.begin());
             bLib.executeSql(item.sql);
         }
@@ -546,8 +546,7 @@ int main(int argc, char* argv[]) {
     std::cout << "port=" << port << std::endl;
 
     while (true) {
-        //std::this_thread::sleep_for(std::chrono::seconds(1));
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         backup_save();
     }
     
