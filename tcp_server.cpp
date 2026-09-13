@@ -43,15 +43,15 @@ std::string readFileToString(const std::string& filePath) {
     return ss.str();
 }
 
-class TodoDatabase {
+class MemDatabase {
 private:
     sqlite3* db;
     
 public:
-    TodoDatabase(const std::string& dbPath = "todos.db") {
+    MemDatabase(const std::string& dbPath = "todos.db") {
         int rc = sqlite3_open(":memory:", &db);
     }
-    ~TodoDatabase() {
+    ~MemDatabase() {
         if (db) {
             sqlite3_close(db);
         }
@@ -321,7 +321,7 @@ public:
         return json.str();
     }
 };
-TodoDatabase todoDb;
+MemDatabase memDb;
 
 void backup_save() {
     try{    
@@ -479,7 +479,7 @@ private:
 
             std::string outStr = "";
             if (action_name == "select") {
-                json j2 = todoDb.selectTableSql(table_name, sql);
+                json j2 = memDb.selectTableSql(table_name, sql);
                 std::string json_str = j2.dump();
                 outStr = json_str;
                 std::cout << json_str << std::endl;
@@ -495,7 +495,7 @@ private:
                 VecQue.push_back(que);
                 std::cout << "VecQue.size=" << VecQue.size() << std::endl;
 
-                bool success = todoDb.executeSql(sql);
+                bool success = memDb.executeSql(sql);
                 outStr = body;
                 std::cout << "outStr=" << outStr << std::endl;
             }
@@ -534,8 +534,8 @@ int main(int argc, char* argv[]) {
         std::string content = readFileToString(BACKUP_SQL_PATH);
         std::cout << "--- SQL-FILE-TEXT ---" << std::endl;
         std::cout << content << std::endl;  
-        bool ret = todoDb.init_import(content.c_str());  
-        std::cout << "todoDb.init_import.ret=" << ret << std::endl;  
+        bool ret = memDb.init_import(content.c_str());  
+        std::cout << "memDb.init_import.ret=" << ret << std::endl;  
     } catch (const std::exception& e) {
         std::cerr << "error: " << e.what() << std::endl;
         return -1;
