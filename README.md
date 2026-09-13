@@ -14,6 +14,14 @@ C++ DB Server TCP , IN memory database SQLite
 * sqlite3 use
 
 ***
+* Speed INSERT 1,000 record , 181 msec
+
+![img1](/images/cpp_db_server_tcp.png)
+
+* related blog
+* https://zenn.dev/link/comments/d44f1840ee714f
+
+***
 ### related Client TCP
 
 https://github.com/kuc-arc-f/cpp_16ex/tree/main/tcp_cl_2
