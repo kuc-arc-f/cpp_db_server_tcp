@@ -327,10 +327,16 @@ void backup_save() {
     try{    
         if (VecQue.size() > 0) {
             BackupDb bLib(BACKUP_DB_PATH);
-            QueItem item = VecQue[0];
-            //std::cout << "uuid=" << item.uuid << std::endl;
-            VecQue.erase(VecQue.begin());
-            bLib.executeSql(item.sql);
+            int item_count = VecQue.size();
+            std::cout << "start.backup_save:count=" << item_count << std::endl;
+            for(int i = 0; i < item_count; i++){
+                QueItem item = VecQue[0];
+                //std::cout << "uuid=" << item.uuid << std::endl;
+                VecQue.erase(VecQue.begin());
+                bLib.executeSql(item.sql);
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+            std::cout << "end.backup_save:count=" << item_count << std::endl;
         }
     } catch (const std::exception& e) {
         std::cerr << "error: " << e.what() << std::endl;
@@ -546,7 +552,7 @@ int main(int argc, char* argv[]) {
     std::cout << "port=" << port << std::endl;
 
     while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         backup_save();
     }
     
