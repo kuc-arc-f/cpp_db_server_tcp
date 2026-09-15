@@ -41,11 +41,6 @@ sqlite3 ./data/backup.db < table.sql
 ```
 
 ***
-* Log file Out , app.log 
-```
-export LOG_FILE_WRITE=1
-```
-***
 * build
 ```
 clang++ -std=c++11 -pthread tcp_server.cpp -o tcp_server -lsqlite3 -luuid -lspdlog -lfmt
@@ -57,8 +52,16 @@ clang++ -std=c++11 -pthread tcp_server.cpp -o tcp_server -lsqlite3 -luuid -lspdl
 
 ```
 ***
+
+* (Option) Log file Out , app.log 
+```
+export LOG_FILE_WRITE=1
+```
+
+***
 ### version
 
+* V_0_9_2: fix , backup.db save
 * V_0_9_1: new
 
 ***
