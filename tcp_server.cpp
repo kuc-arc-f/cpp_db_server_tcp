@@ -182,7 +182,7 @@ public:
         std::vector<QueItem> ret;
         std::stringstream json;
         
-        const char* sql = "SELECT id , sql from system_cache LIMIT 1000";
+        const char* sql = "SELECT id , sql from system_cache LIMIT 10000";
         sqlite3_stmt* stmt;
         
         if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
