@@ -27,6 +27,7 @@ using json = nlohmann::json;
 
 std::string BACKUP_DB_PATH = "./data/backup.db";
 std::string BACKUP_SQL_PATH = "./data/backup.sql";
+std::string LOG_FILE_WRITE = "0";
 std::mutex mtx;
 
 auto logger = spdlog::basic_logger_mt(
@@ -571,9 +572,11 @@ void backup_handle() {
             if (vec1.size() > 0){
                 for (const auto& citem : vec1) {
                     std::cout << "citem.uuid=" << citem.uuid << std::endl; 
-                    std::cout << "citem.sql=" << citem.sql << std::endl; 
-                    logger->info("sql=" +citem.sql);
-                    logger->flush();
+                    std::cout << "citem.sql=" << citem.sql << std::endl;
+                    if(LOG_FILE_WRITE == "1"){
+                        logger->info("sql=" +citem.sql);
+                        logger->flush();
+                    } 
                     bool ok = bLib.executeSql(citem.sql);
                     if(ok == false){
                         std::cerr << "error:, bLib.executeSql "<< std::endl;
@@ -599,6 +602,17 @@ int main(int argc, char* argv[]) {
     if (!server.start()) {
         return -1;
     }
+    char* log_out = std::getenv("LOG_FILE_WRITE");
+    if (log_out) {
+        std::cout << "log_out=" << log_out << std::endl;
+        std::string log_valid = log_out;
+        if(log_valid == "1"){
+            LOG_FILE_WRITE = "1";
+            std::cout << "log_valid=OK" << std::endl;
+        }    
+    }else{
+        std::cout << "log_out: NONE" << std::endl;
+    }
     try{    
         std::string content = readFileToString(BACKUP_SQL_PATH);
         std::cout << "--- SQL-FILE-TEXT ---" << std::endl;
@@ -617,7 +631,9 @@ int main(int argc, char* argv[]) {
     std::thread th1(backup_handle);
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        logger->flush();
+        if(LOG_FILE_WRITE == "1"){
+            logger->flush();
+        }
     }
     
     return 0;

@@ -39,6 +39,12 @@ sudo apt install libspdlog-dev libfmt-dev
 ```
 sqlite3 ./data/backup.db < table.sql
 ```
+
+***
+* Log file Out , app.log 
+```
+export LOG_FILE_WRITE=1
+```
 ***
 * build
 ```
