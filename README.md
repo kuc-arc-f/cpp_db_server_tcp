@@ -42,7 +42,7 @@ sqlite3 ./data/backup.db < table.sql
 ***
 * build
 ```
-clang++ -std=c++11 -pthread tcp_server.cpp -o tcp_server -lsqlite3 -luuid
+clang++ -std=c++11 -pthread tcp_server.cpp -o tcp_server -lsqlite3 -luuid -lspdlog -lfmt
 ```
 
 * start
