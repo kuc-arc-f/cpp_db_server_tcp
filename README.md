@@ -1,6 +1,6 @@
 ﻿# cpp_db_server_tcp
 
- Version: 0.9.1
+ Version: 0.9.2
 
  date    : 2026/09/09
  
@@ -29,8 +29,10 @@ https://github.com/kuc-arc-f/cpp_16ex/tree/main/tcp_cl_2
 ***
 * LIB add
 ```
+sudo apt update
 sudo apt-get install libsqlite3-dev
 sudo apt-get install nlohmann-json3-dev
+sudo apt install libspdlog-dev libfmt-dev
 ```
 ***
 * table add
@@ -48,6 +50,10 @@ clang++ -std=c++11 -pthread tcp_server.cpp -o tcp_server -lsqlite3 -luuid
 ./start.sh
 
 ```
+***
+### version
+
+* V_0_9_1: new
 
 ***
 ### blog

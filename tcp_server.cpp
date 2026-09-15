@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <uuid/uuid.h>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
 #include "include/models.hpp"
 #include "include/BackupDb.hpp"
@@ -25,7 +27,12 @@ using json = nlohmann::json;
 
 std::string BACKUP_DB_PATH = "./data/backup.db";
 std::string BACKUP_SQL_PATH = "./data/backup.sql";
-std::vector<QueItem> VecQue;
+std::mutex mtx;
+
+auto logger = spdlog::basic_logger_mt(
+    "file_logger",
+    "app.log"
+);
 
 std::string readFileToString(const std::string& filePath) {
     std::ifstream file(filePath);
@@ -82,6 +89,22 @@ public:
         if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
             return false;
         }        
+        bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+        sqlite3_finalize(stmt);
+        return success;
+    }
+
+    bool cache_add(const std::string& id, const std::string& sql_text) {
+        sqlite3_stmt* stmt;
+        std::string sql = "INSERT INTO system_cache (id, sql) VALUES (?, ?);";
+        
+        if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+            return false;
+        }
+        
+        sqlite3_bind_text(stmt, 1, id.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, sql_text.c_str(), -1, SQLITE_STATIC);
+
         bool success = (sqlite3_step(stmt) == SQLITE_DONE);
         sqlite3_finalize(stmt);
         return success;
@@ -153,6 +176,53 @@ public:
 
         return result;
     }
+
+    std::vector<QueItem> cache_select_list() {
+        std::vector<QueItem> ret;
+        std::stringstream json;
+        
+        const char* sql = "SELECT id , sql from system_cache LIMIT 1000";
+        sqlite3_stmt* stmt;
+        
+        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+            return ret;
+        }        
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            
+            const unsigned char* id = sqlite3_column_text(stmt, 0);
+            const unsigned char* sql = sqlite3_column_text(stmt, 1);
+            QueItem row;
+            if(id){
+                row.uuid = reinterpret_cast<const char*>(id);
+            }else{
+                row.uuid = "";
+            }
+            if(sql){
+                row.sql = reinterpret_cast<const char*>(sql);
+            }else{
+                row.sql = "";
+            }
+            ret.push_back(row);
+        }
+        
+        sqlite3_finalize(stmt);
+        return ret;
+    }
+
+    bool cashe_delete(std::string id) {
+        std::string sql = "DELETE FROM system_cache WHERE id = ?;";
+        sqlite3_stmt* stmt;
+        
+        if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+            return false;
+        }
+        sqlite3_bind_text(stmt, 1, id.c_str(), -1, SQLITE_STATIC);        
+        //sqlite3_bind_int(stmt, 1, id);
+        bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+        sqlite3_finalize(stmt);
+        return success;
+    }
+        
 
     // テーブルデータをJSONに変換
     json selectTableToJSON(const string& tableName) {
@@ -269,22 +339,7 @@ public:
         sqlite3_finalize(stmt);
         return todos;
     }
-    
-    // 削除（DELETE）
-    bool deleteTodo(int id) {
-        std::string sql = "DELETE FROM todos WHERE id = ?;";
-        sqlite3_stmt* stmt;
         
-        if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-            return false;
-        }
-        
-        sqlite3_bind_int(stmt, 1, id);
-        bool success = (sqlite3_step(stmt) == SQLITE_DONE);
-        sqlite3_finalize(stmt);
-        return success;
-    }
-    
     // JSON形式で一覧取得（API用）
     std::string getTodosAsJSON() {
         std::stringstream json;
@@ -322,27 +377,6 @@ public:
     }
 };
 MemDatabase memDb;
-
-void backup_save() {
-    try{    
-        if (VecQue.size() > 0) {
-            BackupDb bLib(BACKUP_DB_PATH);
-            int item_count = VecQue.size();
-            std::cout << "start.backup_save:count=" << item_count << std::endl;
-            for(int i = 0; i < item_count; i++){
-                QueItem item = VecQue[0];
-                //std::cout << "uuid=" << item.uuid << std::endl;
-                VecQue.erase(VecQue.begin());
-                bLib.executeSql(item.sql);
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
-            std::cout << "end.backup_save:count=" << item_count << std::endl;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "error: " << e.what() << std::endl;
-        return;
-    }
-}
 
 class TCPServer {
 private:
@@ -453,6 +487,7 @@ private:
     }
     
     void handleClient(int client_fd) {
+        std::lock_guard<std::mutex> lock(mtx);
         char buffer[1024];
         
         while (running) {
@@ -498,10 +533,10 @@ private:
                 QueItem que;
                 que.uuid = uuid_str;
                 que.sql = sql;
-                VecQue.push_back(que);
-                std::cout << "VecQue.size=" << VecQue.size() << std::endl;
 
                 bool success = memDb.executeSql(sql);
+                bool ok_cache = memDb.cache_add(uuid_str, sql);
+
                 outStr = body;
                 std::cout << "outStr=" << outStr << std::endl;
             }
@@ -525,6 +560,34 @@ private:
         }
     }
 };
+
+void backup_handle() {
+    try{   
+        BackupDb bLib(BACKUP_DB_PATH);
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            std::vector<QueItem> vec1 = memDb.cache_select_list();
+            std::cout << "vec.size()=" << vec1.size() << std::endl; 
+            if (vec1.size() > 0){
+                for (const auto& citem : vec1) {
+                    std::cout << "citem.uuid=" << citem.uuid << std::endl; 
+                    std::cout << "citem.sql=" << citem.sql << std::endl; 
+                    logger->info("sql=" +citem.sql);
+                    logger->flush();
+                    bool ok = bLib.executeSql(citem.sql);
+                    if(ok == false){
+                        std::cerr << "error:, bLib.executeSql "<< std::endl;
+                    }
+                    memDb.cashe_delete(citem.uuid);
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "error: " << e.what() << std::endl;
+        return;
+    }
+}
 
 int main(int argc, char* argv[]) {
     int port = 8080;
@@ -551,9 +614,10 @@ int main(int argc, char* argv[]) {
     std::cout << "サーバー実行中... (Ctrl+Cで終了)" << std::endl;
     std::cout << "port=" << port << std::endl;
 
+    std::thread th1(backup_handle);
     while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        backup_save();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        logger->flush();
     }
     
     return 0;

@@ -8,6 +8,7 @@
 class BackupDb {
 private:
     sqlite3* db;
+    std::mutex mtx;
     
 public:
     BackupDb(const std::string& dbPath = "todos.db") {
@@ -23,9 +24,11 @@ public:
     }    
 
     bool executeSql(const std::string& sql) {
+        std::lock_guard<std::mutex> lock(mtx);
         sqlite3_stmt* stmt;
         
         if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+            std::cout << "error, sqlite3_prepare_v2" << std::endl;
             return false;
         }        
         bool success = (sqlite3_step(stmt) == SQLITE_DONE);
