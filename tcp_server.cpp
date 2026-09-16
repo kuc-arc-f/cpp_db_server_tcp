@@ -489,13 +489,16 @@ private:
     
     void handleClient(int client_fd) {
         std::lock_guard<std::mutex> lock(mtx);
-        char buffer[1024];
+        const size_t MAX_BUFFER_SIZE = 4096; 
+        char buffer[MAX_BUFFER_SIZE];
+        //char buffer[1024];
         
         while (running) {
             memset(buffer, 0, sizeof(buffer));
             
             // データ受信
             int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+            std::cout << "bytes_read.size=" << std::to_string(bytes_read) << std::endl;
             
             if (bytes_read <= 0) {
                 if (bytes_read == 0) {
@@ -505,50 +508,56 @@ private:
                 }
                 break;
             }
-            
-            // 受信データ表示
-            std::cout << "受信: " << buffer;
-            std::string body = buffer;
-            std::cout << "body=" << body << std::endl;
-
-            json j1 = json::parse(body);
-            std::string action_name = j1.at("action_name").get<std::string>();
-            std::cout << "action_name=" << action_name << "\n";            
-            std::string table_name = j1.at("table").get<std::string>();
-            std::cout << "table_name=" << table_name << "\n";            
-            std::string sql = j1.at("sql").get<std::string>();
-            std::cout << "sql=" << sql << "\n";            
-
-            std::string outStr = "";
-            if (action_name == "select") {
-                json j2 = memDb.selectTableSql(table_name, sql);
-                std::string json_str = j2.dump();
-                outStr = json_str;
-                std::cout << json_str << std::endl;
-            } else{
-                uuid_t uuid;
-                char uuid_str[37];
-                uuid_generate(uuid);
-                uuid_unparse(uuid, uuid_str);
-                std::cout << "UUID: " << uuid_str << std::endl;
-                QueItem que;
-                que.uuid = uuid_str;
-                que.sql = sql;
-
-                bool success = memDb.executeSql(sql);
-                bool ok_cache = memDb.cache_add(uuid_str, sql);
-
-                outStr = body;
-                std::cout << "outStr=" << outStr << std::endl;
+            if(bytes_read >= (MAX_BUFFER_SIZE -1 )){
+                std::cout << "error, buffer over MAX_BUFFER_SIZE " << std::endl;
+                break;
             }
+            try{    
+                // 受信データ表示
+                std::cout << "受信: " << buffer;
+                std::string body = buffer;
+                std::cout << "body=" << body << std::endl;
+                std::cout << "body.len=" << body.size() << std::endl;
 
-            // エコー応答（大文字に変換）
-            std::string response = outStr;
-            
-            // データ送信
-            int bytes_sent = write(client_fd, response.c_str(), response.length());
-            if (bytes_sent < 0) {
-                std::cerr << "送信エラー" << std::endl;
+                json j1 = json::parse(body);
+                std::string action_name = j1.at("action_name").get<std::string>();
+                std::cout << "action_name=" << action_name << "\n";            
+                std::string table_name = j1.at("table").get<std::string>();
+                std::cout << "table_name=" << table_name << "\n";            
+                std::string sql = j1.at("sql").get<std::string>();
+                std::cout << "sql=" << sql << "\n";            
+
+                std::string outStr = "";
+                if (action_name == "select") {
+                    json j2 = memDb.selectTableSql(table_name, sql);
+                    std::string json_str = j2.dump();
+                    outStr = json_str;
+                    std::cout << json_str << std::endl;
+                } else{
+                    uuid_t uuid;
+                    char uuid_str[37];
+                    uuid_generate(uuid);
+                    uuid_unparse(uuid, uuid_str);
+                    std::cout << "UUID: " << uuid_str << std::endl;
+                    QueItem que;
+                    que.uuid = uuid_str;
+                    que.sql = sql;
+
+                    bool success = memDb.executeSql(sql);
+                    bool ok_cache = memDb.cache_add(uuid_str, sql);
+
+                    outStr = body;
+                    std::cout << "outStr=" << outStr << std::endl;
+                }
+                std::string response = outStr;
+                // データ送信
+                int bytes_sent = write(client_fd, response.c_str(), response.length());
+                if (bytes_sent < 0) {
+                    std::cerr << "送信エラー" << std::endl;
+                    break;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "error: " << e.what() << std::endl;
                 break;
             }
         }
