@@ -24,7 +24,13 @@ C++ DB Server TCP , IN memory database SQLite
 ***
 ### related Client TCP
 
+* TCP client
+
 https://github.com/kuc-arc-f/cpp_16ex/tree/main/tcp_cl_2
+
+* DB tool , TUI node
+
+https://github.com/kuc-arc-f/cpp_16ex/tree/main/tui_tcp_1
 
 ***
 * LIB add
