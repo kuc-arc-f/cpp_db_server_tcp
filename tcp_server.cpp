@@ -28,6 +28,7 @@ using json = nlohmann::json;
 std::string BACKUP_DB_PATH = "./data/backup.db";
 std::string BACKUP_SQL_PATH = "./data/backup.sql";
 std::string LOG_FILE_WRITE = "0";
+static constexpr size_t TARGET_BYTES = 100 * 1024;     // 受信したい最小サイズ
 std::mutex mtx;
 
 auto logger = spdlog::basic_logger_mt(
@@ -486,12 +487,12 @@ private:
             client_thread.detach();
         }
     }
-    
+
     void handleClient(int client_fd) {
         std::lock_guard<std::mutex> lock(mtx);
-        const size_t MAX_BUFFER_SIZE = 4096; 
+        //const size_t MAX_BUFFER_SIZE = 4096; 
+        const size_t MAX_BUFFER_SIZE = 32 * 1024; 
         char buffer[MAX_BUFFER_SIZE];
-        //char buffer[1024];
         
         while (running) {
             memset(buffer, 0, sizeof(buffer));
@@ -547,6 +548,15 @@ private:
                     bool ok_cache = memDb.cache_add(uuid_str, sql);
 
                     outStr = body;
+                    if (body.length() >= 1000){
+                        std::cout << "outStr.length=" << outStr.length() << std::endl;
+                        LargeJsonRes res2;
+                        res2.result = "OK";
+                        res2.text = "";
+                        json j = res2;
+                        std::string json_str = j.dump();
+                        outStr = json_str;
+                    }
                     std::cout << "outStr=" << outStr << std::endl;
                 }
                 std::string response = outStr;
@@ -568,7 +578,8 @@ private:
         if (it != client_sockets.end()) {
             client_sockets.erase(it);
         }
-    }
+    }    
+
 };
 
 void backup_handle() {

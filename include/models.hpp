@@ -13,6 +13,12 @@ struct ActionReq {
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ActionReq, action_name, table, sql)
 
+struct LargeJsonRes {
+    std::string result;
+    std::string text;
+};
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LargeJsonRes, result , text)
+
 struct ActionSelectReq {
     std::string action_name;
     std::string table;

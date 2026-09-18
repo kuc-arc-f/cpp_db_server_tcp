@@ -1,6 +1,6 @@
 ﻿# cpp_db_server_tcp
 
- Version: 0.9.2
+ Version: 0.9.3
 
  date    : 2026/09/09
  
@@ -61,6 +61,7 @@ export LOG_FILE_WRITE=1
 ***
 ### version
 
+* V_0_9_3: fix , fix, update receive
 * V_0_9_2: fix , backup.db save
 * V_0_9_1: new
 
